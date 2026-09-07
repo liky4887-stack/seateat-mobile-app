@@ -116,7 +116,7 @@ const baseStyles = {
   header: { minHeight: 58, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, paddingHorizontal: 20 },
   headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 21, letterSpacing: -0.5 },
   headerSpacer: { flex: 1 }, headerIcon: { width: 38, height: 38, alignItems: 'center' as const, justifyContent: 'center' as const },
-  homeTop: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, marginBottom: 26 },
+  homeTop: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, marginTop: 12, marginBottom: 26 },
   avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center' as const, justifyContent: 'center' as const },
   eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1.6, marginBottom: 7 },
   heading: { fontFamily: 'Inter_700Bold', fontSize: 29, letterSpacing: -1.1, marginBottom: 6 },
