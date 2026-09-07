@@ -1,0 +1,1 @@
+- [Expo web preview gate](expo-web-preview.md) — allow the root navigator to render while native font assets resolve.
