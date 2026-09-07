@@ -1,32 +1,75 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
-import { categories, MenuCategory, menuItems, MenuItem } from '@/data/menu';
+import { categories, categoryLabels, MenuCategory, menuItems, MenuItem } from '@/data/menu';
 import { useCart } from '@/context/CartContext';
 
 type Tab = 'home' | 'menu' | 'cart' | 'orders' | 'profile';
 type ViewState = { name: 'tabs' } | { name: 'detail'; item: MenuItem } | { name: 'checkout' };
+type IconName = keyof typeof Icon.glyphMap;
 
+const typeface = Platform.select({ web: 'Arial', default: 'System' }) as string;
 const money = (value: number) => '$' + value.toFixed(2);
+
+function Glyph({ name, size = 20, color = '#1b1520', fill }: { name: IconName; size?: number; color?: string; fill?: string }) {
+  return <Icon name={name} size={size} color={color} {...(fill ? { style: { color: fill } } : {})} />;
+}
 
 function BrandMark() {
   const colors = useColors();
-  return <View style={styles.brand}><View style={[styles.brandIcon, { backgroundColor: colors.brandRed }]}><Feather name="coffee" size={16} color={colors.card} /></View><Text style={[styles.brandText, { color: colors.brandGreenDark }]}>Seateat</Text></View>;
+  return (
+    <View style={styles.brand}>
+      <LinearGradient colors={[colors.brandRed, colors.brandPink]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.brandIcon}>
+        <Glyph name="silverware-fork-knife" size={17} color={colors.card} />
+      </LinearGradient>
+      <Text style={[styles.brandText, { color: colors.foreground }]}>Seateat</Text>
+    </View>
+  );
 }
 
 function Header({ title, back, onBack, action }: { title?: string; back?: boolean; onBack?: () => void; action?: React.ReactNode }) {
   const colors = useColors();
-  return <View style={styles.header}>{back ? <Pressable testID="back-button" onPress={onBack} style={styles.headerIcon}><Feather name="arrow-left" size={21} color={colors.foreground} /></Pressable> : <BrandMark />}{title ? <Text style={[styles.headerTitle, { color: colors.foreground }]}>{title}</Text> : <View style={styles.headerSpacer} />}{action ?? <View style={styles.headerIcon} />}</View>;
+  return (
+    <View style={styles.header}>
+      {back ? <Pressable testID="back-button" onPress={onBack} style={styles.headerIcon}><Glyph name="arrow-right" size={23} color={colors.foreground} /></Pressable> : <BrandMark />}
+      {title ? <Text style={[styles.headerTitle, { color: colors.foreground }]}>{title}</Text> : <View style={styles.headerSpacer} />}
+      {action ?? <View style={styles.headerIcon} />}
+    </View>
+  );
+}
+
+function CategoryPill({ category, active, onPress }: { category: MenuCategory; active: boolean; onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable testID={'category-' + category} onPress={onPress} style={[styles.pill, { backgroundColor: active ? colors.brandRed : colors.card, borderColor: active ? colors.brandRed : colors.border }]}>
+      <Text style={[styles.pillText, { color: active ? colors.card : colors.mutedForeground }]}>{categoryLabels[category]}</Text>
+    </Pressable>
+  );
 }
 
 function FoodCard({ item, onSelect }: { item: MenuItem; onSelect: () => void }) {
   const colors = useColors();
   const { addItem } = useCart();
-  return <Pressable testID={'food-card-' + item.id} onPress={onSelect} style={({ pressed }) => [styles.foodCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.9 : 1 }]}><View style={[styles.foodImageWrap, { backgroundColor: item.accent }]}><Image source={item.image} style={styles.foodImage as any} contentFit="cover" /><Pressable testID={'quick-add-' + item.id} onPress={() => { addItem(item); Haptics.selectionAsync(); }} style={[styles.quickAdd, { backgroundColor: colors.card }]}><Feather name="plus" size={17} color={colors.brandGreenDark} /></Pressable></View><View style={styles.foodCopy}><Text numberOfLines={1} style={[styles.foodName, { color: colors.foreground }]}>{item.name}</Text><Text numberOfLines={2} style={[styles.foodDesc, { color: colors.mutedForeground }]}>{item.description}</Text><Text style={[styles.foodPrice, { color: colors.brandRed }]}>{money(item.price)}</Text></View></Pressable>;
+  return (
+    <Pressable testID={'food-card-' + item.id} onPress={onSelect} style={({ pressed }) => [styles.foodCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.92 : 1 }]}>
+      <View style={[styles.foodImageWrap, { backgroundColor: item.accent }]}>
+        <Image source={item.image} style={styles.foodImage as any} contentFit="cover" />
+        <Pressable testID={'quick-add-' + item.id} onPress={() => { addItem(item); Haptics.selectionAsync(); }} style={[styles.quickAdd, { backgroundColor: colors.brandGreen }]}>
+          <Glyph name="plus" size={18} color={colors.foreground} />
+        </Pressable>
+      </View>
+      <View style={styles.foodCopy}>
+        <Text numberOfLines={1} style={[styles.foodName, { color: colors.foreground }]}>{item.name}</Text>
+        <Text numberOfLines={2} style={[styles.foodDesc, { color: colors.mutedForeground }]}>{item.description}</Text>
+        <Text style={[styles.foodPrice, { color: colors.brandRed }]}>{money(item.price)}</Text>
+      </View>
+    </Pressable>
+  );
 }
 
 function Home({ onTab, onSelect }: { onTab: (tab: Tab) => void; onSelect: (item: MenuItem) => void }) {
@@ -36,8 +79,45 @@ function Home({ onTab, onSelect }: { onTab: (tab: Tab) => void; onSelect: (item:
   const [query, setQuery] = useState('');
   const [active, setActive] = useState<MenuCategory>('Popular');
   const [table, setTable] = useState('12');
-  const items = useMemo(() => menuItems.filter((item) => (active === 'Popular' ? item.popular : item.category === active) && item.name.toLowerCase().includes(query.toLowerCase())), [active, query]);
-  return <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}><View style={styles.homeTop}><BrandMark /><Pressable testID="home-profile-button" onPress={() => onTab('profile')} style={[styles.avatar, { backgroundColor: colors.secondary }]}><Feather name="user" size={17} color={colors.brandGreenDark} /></Pressable></View><Text style={[styles.eyebrow, { color: colors.brandRed }]}>GOOD EVENING</Text><Text style={[styles.heading, { color: colors.foreground }]}>What are you craving?</Text><Text style={[styles.subheading, { color: colors.mutedForeground }]}>Order something delicious from your seat.</Text><View style={[styles.search, { backgroundColor: colors.card, borderColor: colors.border }]}><Feather name="search" size={18} color={colors.mutedForeground} /><TextInput testID="menu-search" value={query} onChangeText={setQuery} placeholder="Search the menu" placeholderTextColor={colors.mutedForeground} style={[styles.searchInput, { color: colors.foreground }]} /></View><View style={[styles.tableCard, { backgroundColor: colors.brandGreenDark }]}><View style={styles.tableCopy}><Text style={[styles.tableLabel, { color: colors.cream }]}>YOU ARE ORDERING FROM</Text><Text style={[styles.tableTitle, { color: colors.card }]}>Table {table}</Text><Text style={[styles.tableHint, { color: '#c9e1d2' }]}>Tap below to edit your table number</Text></View><TextInput testID="table-number-input" value={table} onChangeText={setTable} keyboardType="number-pad" maxLength={3} style={[styles.tableInput, { color: colors.card, borderColor: colors.brandRed }]} /></View><View style={styles.sectionHead}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>Explore the menu</Text><Pressable testID="see-all-button" onPress={() => onTab('menu')}><Text style={[styles.seeAll, { color: colors.brandRed }]}>See all</Text></Pressable></View><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>{categories.map((category) => <Pressable key={category} testID={'category-' + category} onPress={() => setActive(category)} style={[styles.pill, { backgroundColor: active === category ? colors.brandGreen : colors.card, borderColor: active === category ? colors.brandGreen : colors.border }]}><Text style={[styles.pillText, { color: active === category ? colors.card : colors.mutedForeground }]}>{category}</Text></Pressable>)}</ScrollView><View style={styles.grid}>{items.map((item) => <FoodCard key={item.id} item={item} onSelect={() => onSelect(item)} />)}</View>{!items.length && <View style={styles.empty}><Ionicons name="search-outline" size={29} color={colors.mutedForeground} /><Text style={[styles.emptyTitle, { color: colors.foreground }]}>Nothing found</Text><Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Try another dish or category.</Text></View>}<View style={{ height: 95 }} /></ScrollView>{itemCount > 0 && <Pressable testID="view-cart-button" onPress={() => onTab('cart')} style={[styles.cartBar, { backgroundColor: colors.brandGreenDark }]}><View style={styles.cartBadge}><Feather name="shopping-bag" size={17} color={colors.brandGreenDark} /><Text style={[styles.badgeCount, { color: colors.brandGreenDark }]}>{itemCount}</Text></View><Text style={[styles.cartLabel, { color: colors.card }]}>View your order</Text><Text style={[styles.cartTotal, { color: colors.card }]}>{money(total)}</Text></Pressable>}</View>;
+  const items = useMemo(() => menuItems.filter((item) => (active === 'Popular' ? item.popular : item.category === active) && item.name.includes(query.trim())), [active, query]);
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.homeTop}>
+          <BrandMark />
+          <Pressable testID="home-profile-button" onPress={() => onTab('profile')} style={[styles.avatar, { backgroundColor: colors.card }]}>
+            <Glyph name="account-circle-outline" size={23} color={colors.brandPurple} />
+          </Pressable>
+        </View>
+        <Text style={[styles.eyebrow, { color: colors.brandRed }]}>مساء الخير</Text>
+        <Text style={[styles.heading, { color: colors.foreground }]}>ماذا تشتهي اليوم؟</Text>
+        <Text style={[styles.subheading, { color: colors.mutedForeground }]}>اطلب وجبتك اللذيذة من مكانك.</Text>
+        <View style={[styles.search, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Glyph name="magnify" size={21} color={colors.mutedForeground} />
+          <TextInput testID="menu-search" value={query} onChangeText={setQuery} placeholder="ابحث في القائمة" placeholderTextColor={colors.mutedForeground} style={[styles.searchInput, { color: colors.foreground }]} />
+        </View>
+        <LinearGradient colors={[colors.brandRed, colors.brandPink]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.tableCard}>
+          <View style={styles.tableCopy}>
+            <Text style={[styles.tableLabel, { color: colors.card }]}>أنت تطلب من</Text>
+            <Text style={[styles.tableTitle, { color: colors.card }]}>طاولة {table}</Text>
+            <Text style={[styles.tableHint, { color: colors.card }]}>اضغط لتعديل رقم الطاولة</Text>
+          </View>
+          <TextInput testID="table-number-input" value={table} onChangeText={setTable} keyboardType="number-pad" maxLength={3} style={[styles.tableInput, { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.card }]} />
+        </LinearGradient>
+        <View style={styles.sectionHead}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>اكتشف القائمة</Text>
+          <Pressable testID="see-all-button" onPress={() => onTab('menu')}><Text style={[styles.seeAll, { color: colors.brandRed }]}>عرض الكل</Text></Pressable>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>
+          {categories.map((category) => <CategoryPill key={category} category={category} active={active === category} onPress={() => setActive(category)} />)}
+        </ScrollView>
+        <View style={styles.grid}>{items.map((item) => <FoodCard key={item.id} item={item} onSelect={() => onSelect(item)} />)}</View>
+        {!items.length && <View style={styles.empty}><Glyph name="magnify-close" size={32} color={colors.mutedForeground} /><Text style={[styles.emptyTitle, { color: colors.foreground }]}>لم نجد ما تبحث عنه</Text><Text style={[styles.emptyText, { color: colors.mutedForeground }]}>جرّب طبقاً أو تصنيفاً آخر.</Text></View>}
+        <View style={{ height: 100 }} />
+      </ScrollView>
+      {itemCount > 0 && <Pressable testID="view-cart-button" onPress={() => onTab('cart')} style={[styles.cartBar, { backgroundColor: colors.foreground }]}><View style={[styles.cartBadge, { backgroundColor: colors.brandGreen }]}><Glyph name="shopping-outline" size={19} color={colors.foreground} /><Text style={[styles.badgeCount, { color: colors.foreground, backgroundColor: colors.brandYellow }]}>{itemCount}</Text></View><Text style={[styles.cartLabel, { color: colors.card }]}>عرض طلبك</Text><Text style={[styles.cartTotal, { color: colors.card }]}>{money(total)}</Text></Pressable>}
+    </View>
+  );
 }
 
 function Menu({ onSelect }: { onSelect: (item: MenuItem) => void }) {
@@ -46,7 +126,17 @@ function Menu({ onSelect }: { onSelect: (item: MenuItem) => void }) {
   const { addItem } = useCart();
   const [active, setActive] = useState<MenuCategory>('Popular');
   const items = menuItems.filter((item) => active === 'Popular' ? item.popular : item.category === active);
-  return <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}><Header title="Menu" action={<Feather name="search" size={20} color={colors.foreground} />} /><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}><Text style={[styles.intro, { color: colors.mutedForeground }]}>Fresh from the kitchen, ready when you are.</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>{categories.map((category) => <Pressable key={category} onPress={() => setActive(category)} style={[styles.pill, { backgroundColor: active === category ? colors.brandGreen : colors.card, borderColor: active === category ? colors.brandGreen : colors.border }]}><Text style={[styles.pillText, { color: active === category ? colors.card : colors.mutedForeground }]}>{category}</Text></Pressable>)}</ScrollView>{items.map((item) => <Pressable key={item.id} testID={'menu-item-' + item.id} onPress={() => onSelect(item)} style={[styles.menuRow, { backgroundColor: colors.card, borderColor: colors.border }]}><Image source={item.image} style={styles.menuImage as any} contentFit="cover" /><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.foreground }]}>{item.name}</Text><Text numberOfLines={2} style={[styles.menuDesc, { color: colors.mutedForeground }]}>{item.description}</Text><Text style={[styles.foodPrice, { color: colors.brandRed }]}>{money(item.price)}</Text></View><Pressable testID={'menu-add-' + item.id} onPress={() => addItem(item)} style={[styles.addButton, { backgroundColor: colors.secondary }]}><Feather name="plus" size={17} color={colors.brandGreenDark} /></Pressable></Pressable>)}<View style={{ height: 30 }} /></ScrollView></View>;
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <Header title="القائمة" action={<Glyph name="magnify" size={23} color={colors.foreground} />} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.intro, { color: colors.mutedForeground }]}>طازج من المطبخ، وجاهز عندما تكون مستعداً.</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>{categories.map((category) => <CategoryPill key={category} category={category} active={active === category} onPress={() => setActive(category)} />)}</ScrollView>
+        {items.map((item) => <Pressable key={item.id} testID={'menu-item-' + item.id} onPress={() => onSelect(item)} style={[styles.menuRow, { backgroundColor: colors.card, borderColor: colors.border }]}><Image source={item.image} style={styles.menuImage as any} contentFit="cover" /><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.foreground }]}>{item.name}</Text><Text numberOfLines={2} style={[styles.menuDesc, { color: colors.mutedForeground }]}>{item.description}</Text><Text style={[styles.foodPrice, { color: colors.brandRed }]}>{money(item.price)}</Text></View><Pressable testID={'menu-add-' + item.id} onPress={() => addItem(item)} style={[styles.addButton, { backgroundColor: colors.brandGreen }]}><Glyph name="plus" size={18} color={colors.foreground} /></Pressable></Pressable>)}
+        <View style={{ height: 30 }} />
+      </ScrollView>
+    </View>
+  );
 }
 
 function Detail({ item, onBack, onCart }: { item: MenuItem; onBack: () => void; onCart: () => void }) {
@@ -55,14 +145,35 @@ function Detail({ item, onBack, onCart }: { item: MenuItem; onBack: () => void; 
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [favorite, setFavorite] = useState(false);
-  return <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}><Header back onBack={onBack} action={<Pressable testID="favorite-button" onPress={() => setFavorite((value) => !value)}><Feather name="heart" size={21} color={favorite ? colors.brandRed : colors.foreground} fill={favorite ? colors.brandRed : 'transparent'} /></Pressable>} /><ScrollView contentContainerStyle={styles.content}><View style={[styles.detailHero, { backgroundColor: item.accent }]}><Image source={item.image} style={styles.detailImage as any} contentFit="cover" /></View><Text style={[styles.eyebrow, { color: colors.brandRed }]}>{item.category.toUpperCase()}</Text><Text style={[styles.detailTitle, { color: colors.foreground }]}>{item.name}</Text><Text style={[styles.detailPrice, { color: colors.brandRed }]}>{money(item.price)}</Text><Text style={[styles.detailDesc, { color: colors.mutedForeground }]}>{item.description}</Text><View style={[styles.divider, { backgroundColor: colors.border }]} /><View style={styles.quantityRow}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quantity</Text><View style={[styles.stepper, { backgroundColor: colors.secondary }]}><Pressable testID="decrease-quantity" onPress={() => setQuantity((value) => Math.max(1, value - 1))} style={styles.stepperButton}><Feather name="minus" size={15} color={colors.brandGreenDark} /></Pressable><Text style={[styles.quantity, { color: colors.foreground }]}>{quantity}</Text><Pressable testID="increase-quantity" onPress={() => setQuantity((value) => value + 1)} style={styles.stepperButton}><Feather name="plus" size={15} color={colors.brandGreenDark} /></Pressable></View></View><Pressable testID="add-to-cart-button" onPress={() => { addItem(item, quantity); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onCart(); }} style={[styles.primaryButton, { backgroundColor: colors.brandGreenDark }]}><Feather name="shopping-bag" size={18} color={colors.card} /><Text style={[styles.primaryButtonText, { color: colors.card }]}>Add to order · {money(item.price * quantity)}</Text></Pressable></ScrollView></View>;
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <Header back onBack={onBack} action={<Pressable testID="favorite-button" onPress={() => setFavorite((value) => !value)}><Glyph name={favorite ? 'heart' : 'heart-outline'} size={25} color={favorite ? colors.brandRed : colors.foreground} /></Pressable>} />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={[styles.detailHero, { backgroundColor: item.accent }]}><Image source={item.image} style={styles.detailImage as any} contentFit="cover" /><View style={[styles.detailBadge, { backgroundColor: colors.card }]}><Glyph name="star-four-points" size={15} color={colors.brandRed} /></View></View>
+        <Text style={[styles.eyebrow, { color: colors.brandRed }]}>{categoryLabels[item.category]}</Text>
+        <Text style={[styles.detailTitle, { color: colors.foreground }]}>{item.name}</Text>
+        <Text style={[styles.detailPrice, { color: colors.brandRed }]}>{money(item.price)}</Text>
+        <Text style={[styles.detailDesc, { color: colors.mutedForeground }]}>{item.description}</Text>
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <View style={styles.quantityRow}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>الكمية</Text><View style={[styles.stepper, { backgroundColor: colors.card, borderColor: colors.border }]}><Pressable testID="decrease-quantity" onPress={() => setQuantity((value) => Math.max(1, value - 1))} style={styles.stepperButton}><Glyph name="minus" size={16} color={colors.foreground} /></Pressable><Text style={[styles.quantity, { color: colors.foreground }]}>{quantity}</Text><Pressable testID="increase-quantity" onPress={() => setQuantity((value) => value + 1)} style={styles.stepperButton}><Glyph name="plus" size={16} color={colors.foreground} /></Pressable></View></View>
+        <Pressable testID="add-to-cart-button" onPress={() => { addItem(item, quantity); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); onCart(); }}><LinearGradient colors={[colors.brandRed, colors.brandPink]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.primaryButton}><Glyph name="shopping-outline" size={20} color={colors.card} /><Text style={[styles.primaryButtonText, { color: colors.card }]}>أضف للطلب · {money(item.price * quantity)}</Text></LinearGradient></Pressable>
+      </ScrollView>
+    </View>
+  );
 }
 
 function Cart({ onCheckout, onMenu }: { onCheckout: () => void; onMenu: () => void }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { lines, setQuantity, clearCart, subtotal, serviceFee, total } = useCart();
-  return <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}><Header title="Your order" action={<Pressable testID="clear-cart-button" onPress={clearCart}><Feather name="trash-2" size={19} color={colors.mutedForeground} /></Pressable>} /><ScrollView contentContainerStyle={styles.content}>{lines.length ? <>{lines.map((line) => <View key={line.id} style={[styles.menuRow, { backgroundColor: colors.card, borderColor: colors.border }]}><Image source={line.image} style={styles.cartImage as any} contentFit="cover" /><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.foreground }]}>{line.name}</Text><Text style={[styles.foodPrice, { color: colors.brandRed }]}>{money(line.price)}</Text><View style={[styles.stepper, { backgroundColor: colors.secondary }]}><Pressable onPress={() => setQuantity(line.id, line.quantity - 1)} style={styles.stepperButton}><Feather name="minus" size={13} color={colors.brandGreenDark} /></Pressable><Text style={[styles.quantity, { color: colors.foreground }]}>{line.quantity}</Text><Pressable onPress={() => setQuantity(line.id, line.quantity + 1)} style={styles.stepperButton}><Feather name="plus" size={13} color={colors.brandGreenDark} /></Pressable></View></View><Text style={[styles.lineTotal, { color: colors.foreground }]}>{money(line.price * line.quantity)}</Text></View>)}<View style={[styles.summary, { borderColor: colors.border }]}><View style={styles.summaryRow}><Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Subtotal</Text><Text style={[styles.summaryValue, { color: colors.foreground }]}>{money(subtotal)}</Text></View><View style={styles.summaryRow}><Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Service fee</Text><Text style={[styles.summaryValue, { color: colors.foreground }]}>{money(serviceFee)}</Text></View><View style={styles.summaryRow}><Text style={[styles.totalLabel, { color: colors.foreground }]}>Total</Text><Text style={[styles.totalValue, { color: colors.brandRed }]}>{money(total)}</Text></View></View><Pressable testID="checkout-button" onPress={onCheckout} style={[styles.primaryButton, { backgroundColor: colors.brandGreenDark }]}><Text style={[styles.primaryButtonText, { color: colors.card }]}>Continue to checkout</Text><Feather name="arrow-right" size={17} color={colors.card} /></Pressable></> : <View style={styles.emptyLarge}><View style={[styles.emptyIcon, { backgroundColor: colors.secondary }]}><Feather name="shopping-bag" size={28} color={colors.brandGreenDark} /></View><Text style={[styles.emptyTitle, { color: colors.foreground }]}>Your order is empty</Text><Text style={[styles.emptyText, { color: colors.mutedForeground }]}>Add something delicious from the menu.</Text><Pressable testID="browse-menu-button" onPress={onMenu} style={[styles.browseButton, { backgroundColor: colors.brandGreen }]}><Text style={[styles.primaryButtonText, { color: colors.card }]}>Browse menu</Text></Pressable></View>}</ScrollView></View>;
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <Header title="طلبك" action={<Pressable testID="clear-cart-button" onPress={clearCart}><Glyph name="trash-can-outline" size={22} color={colors.mutedForeground} /></Pressable>} />
+      <ScrollView contentContainerStyle={styles.content}>
+        {lines.length ? <>{lines.map((line) => <View key={line.id} style={[styles.menuRow, { backgroundColor: colors.card, borderColor: colors.border }]}><Image source={line.image} style={styles.cartImage as any} contentFit="cover" /><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.foreground }]}>{line.name}</Text><Text style={[styles.foodPrice, { color: colors.brandRed }]}>{money(line.price)}</Text><View style={[styles.stepper, styles.smallStepper, { backgroundColor: colors.muted }]}><Pressable onPress={() => setQuantity(line.id, line.quantity - 1)} style={styles.stepperButton}><Glyph name="minus" size={14} color={colors.foreground} /></Pressable><Text style={[styles.quantity, { color: colors.foreground }]}>{line.quantity}</Text><Pressable onPress={() => setQuantity(line.id, line.quantity + 1)} style={styles.stepperButton}><Glyph name="plus" size={14} color={colors.foreground} /></Pressable></View></View><Text style={[styles.lineTotal, { color: colors.foreground }]}>{money(line.price * line.quantity)}</Text></View>)}<View style={[styles.summary, { borderColor: colors.border }]}><View style={styles.summaryRow}><Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>المجموع الفرعي</Text><Text style={[styles.summaryValue, { color: colors.foreground }]}>{money(subtotal)}</Text></View><View style={styles.summaryRow}><Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>رسوم الخدمة</Text><Text style={[styles.summaryValue, { color: colors.foreground }]}>{money(serviceFee)}</Text></View><View style={styles.summaryRow}><Text style={[styles.totalLabel, { color: colors.foreground }]}>الإجمالي</Text><Text style={[styles.totalValue, { color: colors.brandRed }]}>{money(total)}</Text></View></View><Pressable testID="checkout-button" onPress={onCheckout}><LinearGradient colors={[colors.brandRed, colors.brandPink]} style={styles.primaryButton}><Text style={[styles.primaryButtonText, { color: colors.card }]}>متابعة إلى الدفع</Text><Glyph name="arrow-left" size={19} color={colors.card} /></LinearGradient></Pressable></> : <View style={styles.emptyLarge}><View style={[styles.emptyIcon, { backgroundColor: colors.brandGreen }]}><Glyph name="shopping-outline" size={32} color={colors.foreground} /></View><Text style={[styles.emptyTitle, { color: colors.foreground }]}>طلبك فارغ</Text><Text style={[styles.emptyText, { color: colors.mutedForeground }]}>أضف شيئاً لذيذاً من القائمة.</Text><Pressable testID="browse-menu-button" onPress={onMenu}><LinearGradient colors={[colors.brandRed, colors.brandPink]} style={styles.browseButton}><Text style={[styles.primaryButtonText, { color: colors.card }]}>تصفح القائمة</Text></LinearGradient></Pressable></View>}
+      </ScrollView>
+    </View>
+  );
 }
 
 function Checkout({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
@@ -71,35 +182,68 @@ function Checkout({ onBack, onDone }: { onBack: () => void; onDone: () => void }
   const { total, clearCart } = useCart();
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
-  const placeOrder = () => { if (!name.trim()) { Alert.alert('Add your name', 'Please tell us who to bring the order to.'); return; } clearCart(); onDone(); };
-  return <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}><Header title="Checkout" back onBack={onBack} /><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled"><View style={[styles.notice, { backgroundColor: colors.secondary }]}><Feather name="check-circle" size={20} color={colors.brandGreenDark} /><View><Text style={[styles.noticeTitle, { color: colors.brandGreenDark }]}>Ordering from Table 12</Text><Text style={[styles.noticeText, { color: colors.mutedForeground }]}>Your server will bring everything right over.</Text></View></View><Text style={[styles.sectionTitle, { color: colors.foreground }]}>Your details</Text><Text style={[styles.label, { color: colors.mutedForeground }]}>Name</Text><TextInput testID="name-input" value={name} onChangeText={setName} placeholder="e.g. Maya" placeholderTextColor={colors.mutedForeground} style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} /><Text style={[styles.label, { color: colors.mutedForeground }]}>Order note (optional)</Text><TextInput testID="order-note-input" value={note} onChangeText={setNote} placeholder="Any allergies or special requests?" placeholderTextColor={colors.mutedForeground} multiline style={[styles.input, styles.noteInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} /><Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 9 }]}>Payment</Text><View style={[styles.paymentRow, { backgroundColor: colors.card, borderColor: colors.border }]}><View style={[styles.paymentIcon, { backgroundColor: colors.secondary }]}><Feather name="credit-card" size={18} color={colors.brandGreenDark} /></View><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.foreground }]}>Pay at the table</Text><Text style={[styles.menuDesc, { color: colors.mutedForeground }]}>Cash or card with your server</Text></View><Feather name="chevron-right" size={18} color={colors.mutedForeground} /></View><Pressable testID="place-order-button" onPress={placeOrder} style={[styles.primaryButton, { backgroundColor: colors.brandGreenDark }]}><Text style={[styles.primaryButtonText, { color: colors.card }]}>Place order · {money(total)}</Text></Pressable></ScrollView></View>;
+  const placeOrder = () => { if (!name.trim()) { Alert.alert('أدخل اسمك', 'أخبرنا باسم الشخص الذي سيستلم الطلب.'); return; } clearCart(); onDone(); };
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <Header title="إتمام الطلب" back onBack={onBack} />
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={[styles.notice, { backgroundColor: colors.brandGreen }]}><Glyph name="check-circle-outline" size={23} color={colors.foreground} /><View style={styles.noticeCopy}><Text style={[styles.noticeTitle, { color: colors.foreground }]}>الطلب من الطاولة 12</Text><Text style={[styles.noticeText, { color: colors.foreground }]}>سيحضر لك النادل كل شيء إلى مكانك.</Text></View></View>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>بياناتك</Text>
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>الاسم</Text>
+        <TextInput testID="name-input" value={name} onChangeText={setName} placeholder="مثال: مايا" placeholderTextColor={colors.mutedForeground} style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} />
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>ملاحظة على الطلب (اختياري)</Text>
+        <TextInput testID="order-note-input" value={note} onChangeText={setNote} placeholder="هل لديك حساسية أو طلب خاص؟" placeholderTextColor={colors.mutedForeground} multiline style={[styles.input, styles.noteInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground }]} />
+        <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 9 }]}>طريقة الدفع</Text>
+        <View style={[styles.paymentRow, { backgroundColor: colors.card, borderColor: colors.border }]}><View style={[styles.paymentIcon, { backgroundColor: colors.brandPurple }]}><Glyph name="credit-card-outline" size={20} color={colors.card} /></View><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.foreground }]}>الدفع على الطاولة</Text><Text style={[styles.menuDesc, { color: colors.mutedForeground }]}>نقداً أو بالبطاقة مع النادل</Text></View><Glyph name="chevron-left" size={21} color={colors.mutedForeground} /></View>
+        <Pressable testID="place-order-button" onPress={placeOrder}><LinearGradient colors={[colors.brandRed, colors.brandPink]} style={styles.primaryButton}><Text style={[styles.primaryButtonText, { color: colors.card }]}>تأكيد الطلب · {money(total)}</Text></LinearGradient></Pressable>
+      </ScrollView>
+    </View>
+  );
 }
 
 function Orders() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  return <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}><Header title="Orders" /><ScrollView contentContainerStyle={styles.content}><View style={[styles.activeOrder, { backgroundColor: colors.brandGreenDark }]}><View style={styles.orderTop}><View style={[styles.statusDot, { backgroundColor: '#f6c765' }]} /><Text style={[styles.status, { color: colors.cream }]}>IN PROGRESS</Text><Text style={[styles.orderNumber, { color: '#c9e1d2' }]}>#1042</Text></View><Text style={[styles.activeTitle, { color: colors.card }]}>Your order is being prepared</Text><Text style={[styles.activeText, { color: '#c9e1d2' }]}>We’ll bring it straight to Table 12.</Text><View style={styles.progress}><View style={[styles.progressFill, { backgroundColor: '#f6c765' }]} /></View><View style={styles.progressLabels}><Text style={[styles.progressLabel, { color: colors.cream }]}>Confirmed</Text><Text style={[styles.progressLabel, { color: '#c9e1d2' }]}>Cooking</Text><Text style={[styles.progressLabel, { color: '#789b88' }]}>Served</Text></View></View><Text style={[styles.historyTitle, { color: colors.foreground }]}>Recent orders</Text>{[['Crispy Chicken Gyoza · 2 items', 'Today, 7:42 PM · Table 12', '$29.40'], ['Miso Mushroom Ramen', 'Yesterday, 8:15 PM · Table 08', '$16.00']].map(([name, meta, price], index) => <View key={name} style={[styles.historyRow, { backgroundColor: colors.card, borderColor: colors.border }]}><View style={[styles.historyIcon, { backgroundColor: index === 0 ? colors.secondary : colors.warm }]}><Feather name={index === 0 ? 'check' : 'rotate-ccw'} size={18} color={index === 0 ? colors.brandGreenDark : colors.brandRed} /></View><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.foreground }]}>{name}</Text><Text style={[styles.menuDesc, { color: colors.mutedForeground }]}>{meta}</Text></View><Text style={[styles.lineTotal, { color: colors.foreground }]}>{price}</Text></View>)}</ScrollView></View>;
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <Header title="طلباتي" />
+      <ScrollView contentContainerStyle={styles.content}>
+        <LinearGradient colors={[colors.brandPurple, colors.brandBlue]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.activeOrder}><View style={styles.orderTop}><View style={[styles.statusDot, { backgroundColor: colors.brandYellow }]} /><Text style={[styles.status, { color: colors.card }]}>قيد التحضير</Text><Text style={[styles.orderNumber, { color: colors.card }]}>#1042</Text></View><Text style={[styles.activeTitle, { color: colors.card }]}>طلبك قيد التجهيز</Text><Text style={[styles.activeText, { color: colors.card }]}>سنحضره لك مباشرة إلى الطاولة 12.</Text><View style={styles.progress}><View style={[styles.progressFill, { backgroundColor: colors.brandYellow }]} /></View><View style={styles.progressLabels}><Text style={[styles.progressLabel, { color: colors.card }]}>تم التأكيد</Text><Text style={[styles.progressLabel, { color: colors.card }]}>يُطهى الآن</Text><Text style={[styles.progressLabel, { color: colors.card }]}>تم التقديم</Text></View></LinearGradient>
+        <Text style={[styles.historyTitle, { color: colors.foreground }]}>الطلبات السابقة</Text>
+        {[['جيوزا الدجاج · قطعتان', 'اليوم، ٧:٤٢ م · الطاولة 12', '$29.40'], ['رامن الفطر بالميسو', 'أمس، ٨:١٥ م · الطاولة 08', '$16.00']].map(([name, meta, price], index) => <View key={name} style={[styles.historyRow, { backgroundColor: colors.card, borderColor: colors.border }]}><View style={[styles.historyIcon, { backgroundColor: index === 0 ? colors.brandGreen : colors.warm }]}><Glyph name={index === 0 ? 'check' : 'reload'} size={20} color={colors.foreground} /></View><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.foreground }]}>{name}</Text><Text style={[styles.menuDesc, { color: colors.mutedForeground }]}>{meta}</Text></View><Text style={[styles.lineTotal, { color: colors.foreground }]}>{price}</Text></View>)}
+      </ScrollView>
+    </View>
+  );
 }
 
 function Profile() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const options = [{ icon: 'user', label: 'Personal details' }, { icon: 'bell', label: 'Notifications' }, { icon: 'help-circle', label: 'Help & support' }, { icon: 'settings', label: 'Settings' }] as const;
-  return <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}><Header title="Profile" /><ScrollView contentContainerStyle={styles.content}><View style={styles.profile}><View style={[styles.profileAvatar, { backgroundColor: colors.brandRed }]}><Text style={[styles.initials, { color: colors.card }]}>M</Text></View><Text style={[styles.profileName, { color: colors.foreground }]}>Maya</Text><Text style={[styles.subheading, { color: colors.mutedForeground }]}>Welcome back to Seateat</Text></View><View style={[styles.memberCard, { backgroundColor: colors.cream }]}><View style={[styles.memberIcon, { backgroundColor: colors.brandRed }]}><Feather name="star" size={18} color={colors.card} /></View><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.brandRedDark }]}>Seateat regular</Text><Text style={[styles.menuDesc, { color: colors.brandRedDark }]}>You’ve enjoyed 12 meals with us.</Text></View><Feather name="chevron-right" size={19} color={colors.brandRedDark} /></View><View style={[styles.options, { backgroundColor: colors.card, borderColor: colors.border }]}>{options.map((option) => <Pressable key={option.label} style={styles.option}><View style={[styles.optionIcon, { backgroundColor: colors.secondary }]}><Feather name={option.icon} size={17} color={colors.brandGreenDark} /></View><Text style={[styles.optionLabel, { color: colors.foreground }]}>{option.label}</Text><Feather name="chevron-right" size={17} color={colors.mutedForeground} /></Pressable>)}</View><Pressable testID="sign-out-button" style={styles.signOut}><Feather name="log-out" size={17} color={colors.brandRed} /><Text style={[styles.signOutText, { color: colors.brandRed }]}>Sign out</Text></Pressable></ScrollView></View>;
+  const options: { icon: IconName; label: string }[] = [{ icon: 'account-outline', label: 'البيانات الشخصية' }, { icon: 'bell-outline', label: 'الإشعارات' }, { icon: 'help-circle-outline', label: 'المساعدة والدعم' }, { icon: 'cog-outline', label: 'الإعدادات' }];
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <Header title="حسابي" />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.profile}><LinearGradient colors={[colors.brandPurple, colors.brandPink]} style={styles.profileAvatar}><Glyph name="account" size={36} color={colors.card} /></LinearGradient><Text style={[styles.profileName, { color: colors.foreground }]}>مايا</Text><Text style={[styles.subheading, { color: colors.mutedForeground }]}>مرحباً بعودتك إلى Seateat</Text></View>
+        <View style={[styles.memberCard, { backgroundColor: colors.cream }]}><View style={[styles.memberIcon, { backgroundColor: colors.brandRed }]}><Glyph name="star-four-points" size={20} color={colors.card} /></View><View style={styles.menuCopy}><Text style={[styles.menuName, { color: colors.brandRedDark }]}>عضو مميز</Text><Text style={[styles.menuDesc, { color: colors.brandRedDark }]}>استمتعت بـ 12 وجبة معنا.</Text></View><Glyph name="chevron-left" size={21} color={colors.brandRedDark} /></View>
+        <View style={[styles.options, { backgroundColor: colors.card, borderColor: colors.border }]}>{options.map((option) => <Pressable key={option.label} style={styles.option}><View style={[styles.optionIcon, { backgroundColor: colors.muted }]}><Glyph name={option.icon} size={20} color={colors.brandPurple} /></View><Text style={[styles.optionLabel, { color: colors.foreground }]}>{option.label}</Text><Glyph name="chevron-left" size={19} color={colors.mutedForeground} /></Pressable>)}</View>
+        <Pressable testID="sign-out-button" style={styles.signOut}><Glyph name="logout-variant" size={19} color={colors.brandRed} /><Text style={[styles.signOutText, { color: colors.brandRed }]}>تسجيل الخروج</Text></Pressable>
+      </ScrollView>
+    </View>
+  );
 }
 
 function BottomNav({ active, onChange }: { active: Tab; onChange: (tab: Tab) => void }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const tabs: { key: Tab; icon: keyof typeof Feather.glyphMap; label: string }[] = [{ key: 'home', icon: 'home', label: 'Home' }, { key: 'menu', icon: 'book-open', label: 'Menu' }, { key: 'cart', icon: 'shopping-bag', label: 'Order' }, { key: 'orders', icon: 'clock', label: 'Orders' }, { key: 'profile', icon: 'user', label: 'Profile' }];
-  return <View style={[styles.nav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 9) }]}>{tabs.map((tab) => <Pressable testID={'tab-' + tab.key} key={tab.key} onPress={() => onChange(tab.key)} style={styles.navItem}><Feather name={tab.icon} size={21} color={active === tab.key ? colors.brandGreenDark : colors.mutedForeground} /><Text style={[styles.navLabel, { color: active === tab.key ? colors.brandGreenDark : colors.mutedForeground }]}>{tab.label}</Text></Pressable>)}</View>;
+  const tabs: { key: Tab; icon: IconName; label: string }[] = [{ key: 'home', icon: 'home-variant-outline', label: 'الرئيسية' }, { key: 'menu', icon: 'view-grid-outline', label: 'القائمة' }, { key: 'cart', icon: 'shopping-outline', label: 'الطلب' }, { key: 'orders', icon: 'clock-outline', label: 'طلباتي' }, { key: 'profile', icon: 'account-circle-outline', label: 'حسابي' }];
+  return <View style={[styles.nav, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 9) }]}>{tabs.map((tab) => <Pressable testID={'tab-' + tab.key} key={tab.key} onPress={() => onChange(tab.key)} style={styles.navItem}><View style={[styles.navIcon, { backgroundColor: active === tab.key ? colors.brandGreen : 'transparent' }]}><Glyph name={tab.icon} size={22} color={active === tab.key ? colors.foreground : colors.mutedForeground} /></View><Text style={[styles.navLabel, { color: active === tab.key ? colors.foreground : colors.mutedForeground }]}>{tab.label}</Text></Pressable>)}</View>;
 }
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('home');
   const [view, setView] = useState<ViewState>({ name: 'tabs' });
   const [selected, setSelected] = useState<MenuItem | null>(null);
-  const { itemCount } = useCart();
   const selectItem = (item: MenuItem) => { setSelected(item); setView({ name: 'detail', item }); };
   if (view.name === 'detail' && selected) return <Detail item={selected} onBack={() => setView({ name: 'tabs' })} onCart={() => { setTab('cart'); setView({ name: 'tabs' }); }} />;
   if (view.name === 'checkout') return <Checkout onBack={() => setView({ name: 'tabs' })} onDone={() => { setTab('orders'); setView({ name: 'tabs' }); }} />;
@@ -107,75 +251,122 @@ export default function App() {
   return <View style={styles.app}><View style={styles.tabContent}>{screen}</View><BottomNav active={tab} onChange={setTab} /></View>;
 }
 
-const baseStyles = {
-  app: { flex: 1 }, tabContent: { flex: 1 }, screen: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 35 },
-  brand: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
-  brandIcon: { width: 31, height: 31, borderRadius: 10, alignItems: 'center' as const, justifyContent: 'center' as const },
-  brandText: { fontFamily: 'Inter_700Bold', fontSize: 20, letterSpacing: -0.7 },
-  header: { minHeight: 58, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, paddingHorizontal: 20 },
-  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 21, letterSpacing: -0.5 },
-  headerSpacer: { flex: 1 }, headerIcon: { width: 38, height: 38, alignItems: 'center' as const, justifyContent: 'center' as const },
-  homeTop: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, marginTop: 12, marginBottom: 26 },
-  avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center' as const, justifyContent: 'center' as const },
-  eyebrow: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1.6, marginBottom: 7 },
-  heading: { fontFamily: 'Inter_700Bold', fontSize: 29, letterSpacing: -1.1, marginBottom: 6 },
-  subheading: { fontFamily: 'Inter_400Regular', fontSize: 14, marginBottom: 19 },
-  search: { height: 50, borderRadius: 16, borderWidth: 1, flexDirection: 'row' as const, alignItems: 'center' as const, paddingHorizontal: 15, gap: 10, marginBottom: 18 },
-  searchInput: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14 },
-  tableCard: { minHeight: 104, borderRadius: 22, padding: 17, flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 29 },
-  tableCopy: { flex: 1 }, tableLabel: { fontFamily: 'Inter_700Bold', fontSize: 9, letterSpacing: 1.2, marginBottom: 4 },
-  tableTitle: { fontFamily: 'Inter_700Bold', fontSize: 25, letterSpacing: -0.5, marginBottom: 4 },
-  tableHint: { fontFamily: 'Inter_400Regular', fontSize: 11 },
-  tableInput: { width: 47, height: 47, borderRadius: 24, borderWidth: 2, textAlign: 'center' as const, fontFamily: 'Inter_700Bold', fontSize: 15 },
-  sectionHead: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'baseline' as const, marginBottom: 12 },
-  sectionTitle: { fontFamily: 'Inter_700Bold', fontSize: 19, letterSpacing: -0.5 },
-  seeAll: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
-  pills: { gap: 9, paddingBottom: 18 }, pill: { borderRadius: 22, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 10 },
-  pillText: { fontFamily: 'Inter_600SemiBold', fontSize: 12 },
-  grid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, justifyContent: 'space-between' as const, gap: 13 },
-  foodCard: { width: '47.7%' as any, borderWidth: 1, borderRadius: 18, overflow: 'hidden' as const, marginBottom: 1 },
-  foodImageWrap: { height: 135, position: 'relative' as const }, foodImage: { width: '100%' as any, height: '100%' as any },
-  quickAdd: { position: 'absolute' as const, right: 10, bottom: 10, width: 30, height: 30, borderRadius: 15, alignItems: 'center' as const, justifyContent: 'center' as const },
-  foodCopy: { padding: 12 }, foodName: { fontFamily: 'Inter_700Bold', fontSize: 13, marginBottom: 4 },
-  foodDesc: { fontFamily: 'Inter_400Regular', fontSize: 10.5, lineHeight: 15, minHeight: 30, marginBottom: 7 },
-  foodPrice: { fontFamily: 'Inter_700Bold', fontSize: 14 },
-  cartBar: { position: 'absolute' as const, left: 18, right: 18, bottom: 15, height: 58, borderRadius: 20, flexDirection: 'row' as const, alignItems: 'center' as const, paddingHorizontal: 12, gap: 12, elevation: 6 },
-  cartBadge: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#e8f3e9', alignItems: 'center' as const, justifyContent: 'center' as const, position: 'relative' as const },
-  badgeCount: { position: 'absolute' as const, right: -2, top: -2, minWidth: 15, height: 15, borderRadius: 8, backgroundColor: '#f5c766', fontSize: 9, fontFamily: 'Inter_700Bold', textAlign: 'center' as const, paddingTop: 2 },
-  cartLabel: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 14 }, cartTotal: { fontFamily: 'Inter_700Bold', fontSize: 15 },
-  intro: { fontFamily: 'Inter_400Regular', fontSize: 14, marginBottom: 17 },
-  menuRow: { borderWidth: 1, borderRadius: 19, padding: 10, flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 12 },
-  menuImage: { width: 89, height: 89, borderRadius: 14 }, cartImage: { width: 76, height: 76, borderRadius: 13 },
-  menuCopy: { flex: 1, paddingHorizontal: 12 }, menuName: { fontFamily: 'Inter_700Bold', fontSize: 13, marginBottom: 5 },
-  menuDesc: { fontFamily: 'Inter_400Regular', fontSize: 11, lineHeight: 15, marginBottom: 7 },
-  addButton: { width: 34, height: 34, borderRadius: 17, alignItems: 'center' as const, justifyContent: 'center' as const },
-  detailHero: { height: 260, borderRadius: 26, overflow: 'hidden' as const, marginBottom: 24 }, detailImage: { width: '100%' as any, height: '100%' as any },
-  detailTitle: { fontFamily: 'Inter_700Bold', fontSize: 30, letterSpacing: -1, marginBottom: 7 }, detailPrice: { fontFamily: 'Inter_700Bold', fontSize: 18, marginBottom: 12 },
-  detailDesc: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 23 }, divider: { height: 1, marginVertical: 23 },
-  quantityRow: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const },
-  stepper: { height: 42, borderRadius: 22, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 16, paddingHorizontal: 5 },
-  stepperButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center' as const, justifyContent: 'center' as const }, quantity: { fontFamily: 'Inter_700Bold', fontSize: 15 },
-  primaryButton: { height: 58, borderRadius: 20, alignItems: 'center' as const, justifyContent: 'center' as const, flexDirection: 'row' as const, gap: 10, marginTop: 28 },
-  primaryButtonText: { fontFamily: 'Inter_700Bold', fontSize: 14 },
-  summary: { borderTopWidth: 1, paddingTop: 17, marginTop: 12, gap: 13 }, summaryRow: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const },
-  summaryLabel: { fontFamily: 'Inter_400Regular', fontSize: 13 }, summaryValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13 }, totalLabel: { fontFamily: 'Inter_700Bold', fontSize: 17 }, totalValue: { fontFamily: 'Inter_700Bold', fontSize: 20 },
-  label: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginBottom: 8 }, input: { minHeight: 52, borderRadius: 15, borderWidth: 1, paddingHorizontal: 15, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 17 }, noteInput: { minHeight: 94, paddingTop: 15, textAlignVertical: 'top' as const },
-  notice: { borderRadius: 18, padding: 15, flexDirection: 'row' as const, gap: 12, alignItems: 'center' as const, marginBottom: 28 }, noticeTitle: { fontFamily: 'Inter_700Bold', fontSize: 13, marginBottom: 4 }, noticeText: { fontFamily: 'Inter_400Regular', fontSize: 11 },
-  paymentRow: { borderWidth: 1, borderRadius: 18, padding: 13, flexDirection: 'row' as const, alignItems: 'center' as const }, paymentIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center' as const, justifyContent: 'center' as const },
-  activeOrder: { borderRadius: 22, padding: 19, marginBottom: 29 }, orderTop: { flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 14 }, statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 7 },
-  status: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.3 }, orderNumber: { fontFamily: 'Inter_500Medium', fontSize: 11, marginLeft: 'auto' }, activeTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, letterSpacing: -0.5, marginBottom: 7 }, activeText: { fontFamily: 'Inter_400Regular', fontSize: 12, marginBottom: 20 },
-  progress: { height: 6, borderRadius: 3, backgroundColor: '#456e5a', overflow: 'hidden' as const }, progressFill: { height: '100%', width: '58%', borderRadius: 3 }, progressLabels: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, marginTop: 8 }, progressLabel: { fontFamily: 'Inter_500Medium', fontSize: 10 },
-  historyTitle: { fontFamily: 'Inter_700Bold', fontSize: 19, marginBottom: 13 }, historyRow: { borderWidth: 1, borderRadius: 18, padding: 12, flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 10 }, historyIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center' as const, justifyContent: 'center' as const }, lineTotal: { fontFamily: 'Inter_700Bold', fontSize: 14 },
-  profile: { alignItems: 'center' as const, paddingVertical: 14, marginBottom: 21 }, profileAvatar: { width: 76, height: 76, borderRadius: 38, alignItems: 'center' as const, justifyContent: 'center' as const, marginBottom: 13 }, initials: { fontFamily: 'Inter_700Bold', fontSize: 30 }, profileName: { fontFamily: 'Inter_700Bold', fontSize: 22, letterSpacing: -0.5, marginBottom: 5 },
-  memberCard: { borderRadius: 20, padding: 15, flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 21 }, memberIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center' as const, justifyContent: 'center' as const },
-  options: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' as const }, option: { minHeight: 67, flexDirection: 'row' as const, alignItems: 'center' as const, paddingHorizontal: 13, borderBottomWidth: 1, borderBottomColor: '#edf0ed' }, optionIcon: { width: 37, height: 37, borderRadius: 12, alignItems: 'center' as const, justifyContent: 'center' as const }, optionLabel: { flex: 1, paddingHorizontal: 12, fontFamily: 'Inter_600SemiBold', fontSize: 13 },
-  signOut: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 8, marginTop: 26, paddingVertical: 10 }, signOutText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
-  nav: { minHeight: 68, borderTopWidth: 1, flexDirection: 'row' as const, justifyContent: 'space-around' as const, alignItems: 'center' as const }, navItem: { alignItems: 'center' as const, justifyContent: 'center' as const, gap: 4, minWidth: 54 }, navLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 9 },
-};
-
 const styles = StyleSheet.create({
-  ...baseStyles,
-  empty: { alignItems: 'center', paddingVertical: 45, gap: 8 },
-  emptyLarge: { alignItems: 'center', paddingTop: 110, gap: 9 }, emptyIcon: { width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }, emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 19 }, emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 10 }, browseButton: { paddingHorizontal: 24, paddingVertical: 13, borderRadius: 18, marginTop: 4 }, label: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginBottom: 8 }, input: { minHeight: 52, borderRadius: 15, borderWidth: 1, paddingHorizontal: 15, fontFamily: 'Inter_400Regular', fontSize: 13, marginBottom: 17 }, noteInput: { minHeight: 94, paddingTop: 15, textAlignVertical: 'top' }, notice: { borderRadius: 18, padding: 15, flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 28 }, noticeTitle: { fontFamily: 'Inter_700Bold', fontSize: 13, marginBottom: 4 }, noticeText: { fontFamily: 'Inter_400Regular', fontSize: 11 }, paymentRow: { borderWidth: 1, borderRadius: 18, padding: 13, flexDirection: 'row', alignItems: 'center' }, paymentIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }, activeOrder: { borderRadius: 22, padding: 19, marginBottom: 29 }, orderTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 }, statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 7 }, status: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.3 }, orderNumber: { fontFamily: 'Inter_500Medium', fontSize: 11, marginLeft: 'auto' }, activeTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, letterSpacing: -0.5, marginBottom: 7 }, activeText: { fontFamily: 'Inter_400Regular', fontSize: 12, marginBottom: 20 }, progress: { height: 6, borderRadius: 3, backgroundColor: '#456e5a', overflow: 'hidden' }, progressFill: { height: '100%', width: '58%', borderRadius: 3 }, progressLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }, progressLabel: { fontFamily: 'Inter_500Medium', fontSize: 10 }, historyTitle: { fontFamily: 'Inter_700Bold', fontSize: 19, marginBottom: 13 }, historyRow: { borderWidth: 1, borderRadius: 18, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 10 }, historyIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, lineTotal: { fontFamily: 'Inter_700Bold', fontSize: 14 }, profile: { alignItems: 'center', paddingVertical: 14, marginBottom: 21 }, profileAvatar: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', marginBottom: 13 }, initials: { fontFamily: 'Inter_700Bold', fontSize: 30 }, profileName: { fontFamily: 'Inter_700Bold', fontSize: 22, letterSpacing: -0.5, marginBottom: 5 }, memberCard: { borderRadius: 20, padding: 15, flexDirection: 'row', alignItems: 'center', marginBottom: 21 }, memberIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, options: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' }, option: { minHeight: 67, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, borderBottomWidth: 1, borderBottomColor: '#edf0ed' }, optionIcon: { width: 37, height: 37, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, optionLabel: { flex: 1, paddingHorizontal: 12, fontFamily: 'Inter_600SemiBold', fontSize: 13 }, signOut: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 26, paddingVertical: 10 }, signOutText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 }, nav: { minHeight: 68, borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' }, navItem: { alignItems: 'center', justifyContent: 'center', gap: 4, minWidth: 54 }, navLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 9 },
+  app: { flex: 1 },
+  tabContent: { flex: 1 },
+  screen: { flex: 1 },
+  content: { paddingHorizontal: 18, paddingBottom: 35 },
+  brand: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 9 },
+  brandIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center' as const, justifyContent: 'center' as const },
+  brandText: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 21, letterSpacing: -0.7 },
+  header: { minHeight: 66, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, paddingHorizontal: 18 },
+  headerTitle: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 23, letterSpacing: -0.5 },
+  headerSpacer: { flex: 1 },
+  headerIcon: { width: 42, height: 42, alignItems: 'center' as const, justifyContent: 'center' as const },
+  homeTop: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, marginTop: 16, marginBottom: 25 },
+  avatar: { width: 44, height: 44, borderRadius: 16, alignItems: 'center' as const, justifyContent: 'center' as const, borderWidth: 1, borderColor: '#f2c1d0' },
+  eyebrow: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 12, letterSpacing: 1.2, marginBottom: 7, textAlign: 'right' as const },
+  heading: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 31, letterSpacing: -1, marginBottom: 6, textAlign: 'right' as const },
+  subheading: { fontFamily: typeface, fontSize: 14, marginBottom: 19, textAlign: 'right' as const },
+  search: { height: 54, borderRadius: 21, borderWidth: 1, flexDirection: 'row' as const, alignItems: 'center' as const, paddingHorizontal: 16, gap: 10, marginBottom: 18 },
+  searchInput: { flex: 1, fontFamily: typeface, fontSize: 14, textAlign: 'right' as const, writingDirection: 'rtl' as const },
+  tableCard: { minHeight: 126, borderRadius: 27, padding: 18, flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 30, overflow: 'hidden' as const },
+  tableCopy: { flex: 1 },
+  tableLabel: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 11, marginBottom: 4, textAlign: 'right' as const },
+  tableTitle: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 26, letterSpacing: -0.5, marginBottom: 3, textAlign: 'right' as const },
+  tableHint: { fontFamily: typeface, fontSize: 11, textAlign: 'right' as const },
+  tableInput: { width: 53, height: 53, borderRadius: 27, borderWidth: 3, textAlign: 'center' as const, fontFamily: typeface, fontWeight: '800' as const, fontSize: 16 },
+  sectionHead: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, marginBottom: 13 },
+  sectionTitle: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 20, letterSpacing: -0.4, textAlign: 'right' as const },
+  seeAll: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 13 },
+  pills: { gap: 9, paddingBottom: 18 },
+  pill: { borderRadius: 22, borderWidth: 1, paddingHorizontal: 17, paddingVertical: 11 },
+  pillText: { fontFamily: typeface, fontWeight: '700' as const, fontSize: 12 },
+  grid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, justifyContent: 'space-between' as const, gap: 13 },
+  foodCard: { width: '47.8%' as any, borderWidth: 1, borderRadius: 25, overflow: 'hidden' as const, marginBottom: 1, shadowColor: '#c65b85', shadowOpacity: 0.09, shadowRadius: 11, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
+  foodImageWrap: { height: 137, position: 'relative' as const },
+  foodImage: { width: '100%' as any, height: '100%' as any },
+  quickAdd: { position: 'absolute' as const, left: 10, bottom: 10, width: 34, height: 34, borderRadius: 17, alignItems: 'center' as const, justifyContent: 'center' as const },
+  foodCopy: { padding: 12 },
+  foodName: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 13, marginBottom: 4, textAlign: 'right' as const },
+  foodDesc: { fontFamily: typeface, fontSize: 10.5, lineHeight: 16, minHeight: 32, marginBottom: 7, textAlign: 'right' as const },
+  foodPrice: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 15, textAlign: 'right' as const },
+  cartBar: { position: 'absolute' as const, left: 16, right: 16, bottom: 15, height: 62, borderRadius: 23, flexDirection: 'row' as const, alignItems: 'center' as const, paddingHorizontal: 13, gap: 12, elevation: 7 },
+  cartBadge: { width: 39, height: 39, borderRadius: 15, alignItems: 'center' as const, justifyContent: 'center' as const, position: 'relative' as const },
+  badgeCount: { position: 'absolute' as const, right: -3, top: -3, minWidth: 16, height: 16, borderRadius: 8, fontSize: 9, fontFamily: typeface, fontWeight: '800' as const, textAlign: 'center' as const, paddingTop: 2 },
+  cartLabel: { flex: 1, fontFamily: typeface, fontWeight: '800' as const, fontSize: 14, textAlign: 'right' as const },
+  cartTotal: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 15 },
+  intro: { fontFamily: typeface, fontSize: 14, marginBottom: 17, textAlign: 'right' as const },
+  menuRow: { borderWidth: 1, borderRadius: 23, padding: 10, flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 12, shadowColor: '#c65b85', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
+  menuImage: { width: 92, height: 92, borderRadius: 18 },
+  cartImage: { width: 76, height: 76, borderRadius: 17 },
+  menuCopy: { flex: 1, paddingHorizontal: 12 },
+  menuName: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 13, marginBottom: 5, textAlign: 'right' as const },
+  menuDesc: { fontFamily: typeface, fontSize: 11, lineHeight: 16, marginBottom: 7, textAlign: 'right' as const },
+  addButton: { width: 38, height: 38, borderRadius: 15, alignItems: 'center' as const, justifyContent: 'center' as const },
+  detailHero: { height: 274, borderRadius: 29, overflow: 'hidden' as const, marginBottom: 24, position: 'relative' as const },
+  detailImage: { width: '100%' as any, height: '100%' as any },
+  detailBadge: { position: 'absolute' as const, left: 14, top: 14, width: 38, height: 38, borderRadius: 14, alignItems: 'center' as const, justifyContent: 'center' as const },
+  detailTitle: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 30, letterSpacing: -0.8, marginBottom: 7, textAlign: 'right' as const },
+  detailPrice: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 19, marginBottom: 12, textAlign: 'right' as const },
+  detailDesc: { fontFamily: typeface, fontSize: 15, lineHeight: 24, textAlign: 'right' as const },
+  divider: { height: 1, marginVertical: 23 },
+  quantityRow: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const },
+  stepper: { height: 46, borderRadius: 24, borderWidth: 1, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 17, paddingHorizontal: 6 },
+  smallStepper: { height: 38, borderWidth: 0, gap: 10, alignSelf: 'flex-start' as const },
+  stepperButton: { width: 33, height: 33, borderRadius: 17, alignItems: 'center' as const, justifyContent: 'center' as const },
+  quantity: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 15 },
+  primaryButton: { height: 60, borderRadius: 22, alignItems: 'center' as const, justifyContent: 'center' as const, flexDirection: 'row' as const, gap: 10, marginTop: 28, paddingHorizontal: 18 },
+  primaryButtonText: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 14 },
+  summary: { borderTopWidth: 1, paddingTop: 17, marginTop: 12, gap: 13 },
+  summaryRow: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const },
+  summaryLabel: { fontFamily: typeface, fontSize: 13, textAlign: 'right' as const },
+  summaryValue: { fontFamily: typeface, fontWeight: '700' as const, fontSize: 13 },
+  totalLabel: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 18 },
+  totalValue: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 21 },
+  label: { fontFamily: typeface, fontWeight: '700' as const, fontSize: 12, marginBottom: 8, textAlign: 'right' as const },
+  input: { minHeight: 54, borderRadius: 18, borderWidth: 1, paddingHorizontal: 15, fontFamily: typeface, fontSize: 14, marginBottom: 17, textAlign: 'right' as const, writingDirection: 'rtl' as const },
+  noteInput: { minHeight: 98, paddingTop: 15, textAlignVertical: 'top' as const },
+  notice: { borderRadius: 22, padding: 15, flexDirection: 'row' as const, gap: 12, alignItems: 'center' as const, marginBottom: 28 },
+  noticeCopy: { flex: 1 },
+  noticeTitle: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 13, marginBottom: 4, textAlign: 'right' as const },
+  noticeText: { fontFamily: typeface, fontSize: 11, textAlign: 'right' as const },
+  paymentRow: { borderWidth: 1, borderRadius: 22, padding: 13, flexDirection: 'row' as const, alignItems: 'center' as const },
+  paymentIcon: { width: 43, height: 43, borderRadius: 15, alignItems: 'center' as const, justifyContent: 'center' as const },
+  activeOrder: { borderRadius: 28, padding: 20, marginBottom: 29 },
+  orderTop: { flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 14 },
+  statusDot: { width: 9, height: 9, borderRadius: 5, marginRight: 7 },
+  status: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 11 },
+  orderNumber: { fontFamily: typeface, fontWeight: '700' as const, fontSize: 11, marginLeft: 'auto' as const },
+  activeTitle: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 21, letterSpacing: -0.5, marginBottom: 7, textAlign: 'right' as const },
+  activeText: { fontFamily: typeface, fontSize: 12, marginBottom: 20, textAlign: 'right' as const },
+  progress: { height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' as const },
+  progressFill: { height: '100%' as any, width: '58%' as any, borderRadius: 4 },
+  progressLabels: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, marginTop: 9 },
+  progressLabel: { fontFamily: typeface, fontWeight: '700' as const, fontSize: 10 },
+  historyTitle: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 20, marginBottom: 13, textAlign: 'right' as const },
+  historyRow: { borderWidth: 1, borderRadius: 22, padding: 12, flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 10 },
+  historyIcon: { width: 42, height: 42, borderRadius: 15, alignItems: 'center' as const, justifyContent: 'center' as const },
+  lineTotal: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 14 },
+  profile: { alignItems: 'center' as const, paddingVertical: 16, marginBottom: 21 },
+  profileAvatar: { width: 84, height: 84, borderRadius: 30, alignItems: 'center' as const, justifyContent: 'center' as const, marginBottom: 13 },
+  profileName: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 23, letterSpacing: -0.5, marginBottom: 5 },
+  memberCard: { borderRadius: 23, padding: 15, flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 21 },
+  memberIcon: { width: 44, height: 44, borderRadius: 15, alignItems: 'center' as const, justifyContent: 'center' as const },
+  options: { borderRadius: 23, borderWidth: 1, overflow: 'hidden' as const },
+  option: { minHeight: 69, flexDirection: 'row' as const, alignItems: 'center' as const, paddingHorizontal: 13, borderBottomWidth: 1, borderBottomColor: '#f4d4df' },
+  optionIcon: { width: 39, height: 39, borderRadius: 14, alignItems: 'center' as const, justifyContent: 'center' as const },
+  optionLabel: { flex: 1, paddingHorizontal: 12, fontFamily: typeface, fontWeight: '700' as const, fontSize: 13, textAlign: 'right' as const },
+  signOut: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 8, marginTop: 26, paddingVertical: 10 },
+  signOutText: { fontFamily: typeface, fontWeight: '700' as const, fontSize: 13 },
+  nav: { minHeight: 76, borderTopWidth: 1, flexDirection: 'row' as const, justifyContent: 'space-around' as const, alignItems: 'center' as const },
+  navItem: { alignItems: 'center' as const, justifyContent: 'center' as const, gap: 4, minWidth: 54 },
+  navIcon: { width: 36, height: 30, borderRadius: 13, alignItems: 'center' as const, justifyContent: 'center' as const },
+  navLabel: { fontFamily: typeface, fontWeight: '700' as const, fontSize: 9 },
+  empty: { alignItems: 'center' as const, paddingVertical: 45, gap: 8 },
+  emptyLarge: { alignItems: 'center' as const, paddingTop: 110, gap: 9 },
+  emptyIcon: { width: 76, height: 76, borderRadius: 28, alignItems: 'center' as const, justifyContent: 'center' as const, marginBottom: 6 },
+  emptyTitle: { fontFamily: typeface, fontWeight: '800' as const, fontSize: 19 },
+  emptyText: { fontFamily: typeface, fontSize: 13, marginBottom: 10 },
+  browseButton: { paddingHorizontal: 25, paddingVertical: 14, borderRadius: 19, marginTop: 4 },
 });
