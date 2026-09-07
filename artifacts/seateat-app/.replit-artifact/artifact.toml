@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "Seateat Mobile App"
+description = "A faithful mobile restaurant ordering experience recreated from the supplied Seateat UI kit, with browse, menu details, cart, favorites, and account flows."
+version = "1.0.0"
+id = "artifacts/seateat-app"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 25026
+
+[services.development]
+run = "pnpm --filter @workspace/seateat-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/seateat-app", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/seateat-app", "run", "serve" ]
+
+[services.env]
+PORT = "25026"
+BASE_PATH = "/"
