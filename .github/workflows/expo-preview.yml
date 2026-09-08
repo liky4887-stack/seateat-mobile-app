@@ -25,7 +25,9 @@ jobs:
           pnpm --version
       
       - name: Install dependencies
-        run: pnpm install
+        run: |
+          pnpm approve-builds
+          pnpm install
       
       - name: Expo Preview Action
         uses: expo/expo-preview-action@v1.2.2
