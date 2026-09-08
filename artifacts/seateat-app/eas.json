@@ -17,8 +17,7 @@
   },
   "github": {
     "enabled": true,
-    "autoCreatePreviewBuilds": true,
-    "autoCreatePreviewBuildsOnForks": false
+    "autoCreatePreviewBuilds": true
   },
   "submit": {
     "production": {}
