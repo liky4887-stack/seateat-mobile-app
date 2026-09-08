@@ -28,12 +28,15 @@ jobs:
         run: |
           pnpm install --force --no-frozen-lockfile --ignore-scripts
       
-      - name: Install expo globally
+      - name: Add pnpm to PATH
         run: |
-          mkdir -p /home/runner/.local/share/pnpm/bin
-          pnpm add -g expo-cli --bin-link=/home/runner/.local/share/pnpm/bin
+          echo "$HOME/.local/share/pnpm/bin" >> $GITHUB_PATH
+          ln -sf "$(pnpm bin)/expo" /usr/local/bin/expo
+          which expo
+          expo --version
       
-      - name: Expo Preview Action
-        uses: expo/expo-preview-action@v1.2.2
-        with:
-          expo-token: ${{ secrets.EXPO_TOKEN }}
+      - name: Expo Preview
+        run: |
+          npx expo preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
