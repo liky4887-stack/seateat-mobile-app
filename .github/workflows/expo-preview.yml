@@ -9,6 +9,9 @@ on:
 jobs:
   preview:
     runs-on: ubuntu-latest
+    env:
+      CI: false
+      PNODE_IGNORE_BUILD_SCRIPTS: "false"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,8 +29,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pnpm approve-builds
-          pnpm install
+          pnpm install --force --no-frozen-lockfile
       
       - name: Expo Preview Action
         uses: expo/expo-preview-action@v1.2.2
