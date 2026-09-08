@@ -28,11 +28,10 @@ jobs:
         run: |
           pnpm install --force --no-frozen-lockfile --ignore-scripts
       
-      - name: Setup pnpm global bin
-        run: pnpm setup
-      
       - name: Install expo globally
-        run: pnpm add -g expo-cli
+        run: |
+          mkdir -p /home/runner/.local/share/pnpm/bin
+          pnpm add -g expo-cli --bin-link=/home/runner/.local/share/pnpm/bin
       
       - name: Expo Preview Action
         uses: expo/expo-preview-action@v1.2.2
