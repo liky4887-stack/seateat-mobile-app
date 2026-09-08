@@ -29,6 +29,8 @@ jobs:
           pnpm install --force --no-frozen-lockfile --ignore-scripts
       
       - name: Run Expo Preview
-        run: npx expo preview --non-interactive
+        run: |
+          cd artifacts/seateat-app
+          CI=1 npx expo preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
