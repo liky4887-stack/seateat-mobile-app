@@ -17,12 +17,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'pnpm'
       
-      - name: Install pnpm
+      - name: Install pnpm via corepack
         run: |
-          npm install -g pnpm
-          which pnpm
+          corepack enable
+          corepack prepare pnpm@latest --activate
           pnpm --version
       
       - name: Install dependencies
