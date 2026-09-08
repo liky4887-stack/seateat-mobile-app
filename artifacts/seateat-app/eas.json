@@ -15,10 +15,6 @@
     },
     "production": {}
   },
-  "github": {
-    "enabled": true,
-    "autoCreatePreviewBuilds": true
-  },
   "submit": {
     "production": {}
   }
