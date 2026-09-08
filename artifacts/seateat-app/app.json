@@ -15,14 +15,24 @@
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "package": "com.liky4887.seateatapp"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4999553b-ac9f-4699-9b5a-4ea1b0e3ddfc"
+      }
+    },
+    "owner": "liky4887"
   }
 }
