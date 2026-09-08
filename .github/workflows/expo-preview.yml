@@ -28,6 +28,10 @@ jobs:
         run: |
           pnpm install --force --no-frozen-lockfile --ignore-scripts
       
+      - name: Install expo globally
+        run: |
+          pnpm add -g expo-cli
+      
       - name: Expo Preview Action
         uses: expo/expo-preview-action@v1.2.2
         with:
