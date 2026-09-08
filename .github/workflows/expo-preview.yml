@@ -28,13 +28,13 @@ jobs:
         run: |
           pnpm install --force --no-frozen-lockfile --ignore-scripts
       
-      - name: Install expo globally
+      - name: Install EAS CLI
         run: |
-          npm install -g expo-cli
-          which expo
-          expo --version
+          npm install -g eas-cli
       
-      - name: Expo Preview Action
-        uses: expo/expo-preview-action@v1.2.2
-        with:
-          expo-token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build Android Preview
+        run: |
+          cd artifacts/seateat-app
+          eas build --platform android --profile preview --non-interactive --wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
