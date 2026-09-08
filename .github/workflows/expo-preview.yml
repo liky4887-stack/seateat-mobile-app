@@ -28,15 +28,7 @@ jobs:
         run: |
           pnpm install --force --no-frozen-lockfile --ignore-scripts
       
-      - name: Add pnpm to PATH
-        run: |
-          echo "$HOME/.local/share/pnpm/bin" >> $GITHUB_PATH
-          ln -sf "$(pnpm bin)/expo" /usr/local/bin/expo
-          which expo
-          expo --version
-      
-      - name: Expo Preview
-        run: |
-          npx expo preview --non-interactive
+      - name: Run Expo Preview
+        run: npx expo preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
